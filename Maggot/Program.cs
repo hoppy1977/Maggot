@@ -107,7 +107,7 @@ namespace Maggot
 
 			if (deadFiles.Any())
 			{
-				var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFiles");
+				var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFileSummaries");
 				Directory.CreateDirectory(targetDirectory);
 				File.WriteAllLines(Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(projectFile) + ".txt"), deadFiles);
 			}
