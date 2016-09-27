@@ -39,6 +39,8 @@ namespace Maggot
 			Log.Info("Beginning debridement of " + InputSolutionFile + "...");
 
 			var projectsInSolution = SolutionFile.Parse(InputSolutionFile).ProjectsInOrder;
+			Log.Info(projectsInSolution.Count + " projects to process");
+
 			foreach (var projectInSolution in projectsInSolution)
 			{
 				var projectFile = projectInSolution.AbsolutePath;
@@ -76,24 +78,22 @@ namespace Maggot
 						var xAttribute = item.Attribute("Include");
 						if (xAttribute != null)
 						{
-							var absFileName = Path.Combine(projectDirectory, xAttribute.Value);
-							absFileName = Path.GetFullPath(absFileName);
-
-							filesToProcess.Add(absFileName);
+							filesToProcess.Add(xAttribute.Value);
 						}
 					}
 				}
 			}
 
-			Log.Debug(filesToProcess.Count + " implementation files to process");
+			Log.Info(filesToProcess.Count + " implementation files to process");
 
 			// Ok, we have built up a list of files in the solution
 			// Now we process each one
+			var deadFiles = new List<string>();
 			foreach (var implementationFile in filesToProcess)
 			{
 				Log.Info(implementationFile);
 
-				CleanDirectory(projectDirectory);
+				RefreshDirectory(projectDirectory);
 
 				RemoveReferenceToFile(projectFile, implementationFile);
 
@@ -101,29 +101,75 @@ namespace Maggot
 				if (builtSuccessfully)
 				{
 					Log.Info("Build suceeded: Dead code identified!");
+					deadFiles.Add(implementationFile);
 				}
+			}
+
+			if (deadFiles.Any())
+			{
+				var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFiles");
+				Directory.CreateDirectory(targetDirectory);
+				File.WriteAllLines(Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(projectFile) + ".txt"), deadFiles);
 			}
 		}
 
-		private static void CleanDirectory(string directory)
+		private static void RefreshDirectory(string directory)
 		{
-			Log.Debug("Cleaning " + directory + "...");
+			Log.Debug("Refreshing contents of " + directory + "...");
+
+			Log.Debug("Deleting contents of folder");
+			var directoryInfo = new DirectoryInfo(directory);
+			foreach (var file in directoryInfo.GetFiles())
+			{
+				file.Delete();
+			}
+			foreach (var subDirectory in directoryInfo.GetDirectories())
+			{
+				subDirectory.Delete(true);
+			}
 
 			using (var client = new SvnClient())
 			{
-				//client.Revert()
-				//					client.CleanUp(projectDirectory, new SvnCleanUpArgs
-				//{
-
-				//});
+				Log.Debug("Reverting all changes to folder");
+				client.Revert(directory, new SvnRevertArgs
+				{
+					Depth = SvnDepth.Infinity,
+				});
 			}
+
+			Log.Debug("Finished refreshing directory " + directory);
 		}
 
 		private static void RemoveReferenceToFile(string projectFile, string fileName)
 		{
 			Log.Debug("Removing reference to file from project...");
 
-			// TODO:
+			var doc = XDocument.Load(projectFile);
+			var ns = doc.Root?.Name.Namespace;
+			var itemGroups = doc.Root?.Elements(ns + "ItemGroup").ToList();
+
+			if (itemGroups != null)
+			{
+				var fileItems = itemGroups.Elements(ns + "ClCompile");
+				if (fileItems != null)
+				{
+					foreach (var item in fileItems)
+					{
+						var xAttribute = item.Attribute("Include");
+						if (xAttribute != null)
+						{
+							if (xAttribute.Value == fileName)
+							{
+								item.Remove();
+								doc.Save(projectFile);
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			Log.Debug("Finished removing reference to file from project...");
 		}
 
 		private static bool BuildSolution(string solutionFile)
@@ -140,7 +186,6 @@ namespace Maggot
 
 				var buildRequest = new BuildRequestData(solutionFile, globalProperty, null, new string[] { "Build" }, null);
 				var buildResult = BuildManager.DefaultBuildManager.Build(new BuildParameters(pc), buildRequest);
-
 				if (buildResult.OverallResult == BuildResultCode.Success)
 				{
 					Log.Debug("Build succeeded");
