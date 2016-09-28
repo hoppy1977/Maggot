@@ -15,6 +15,10 @@ namespace Maggot
 	{
 		private static readonly log4net.ILog Log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 		public static string InputSolutionFile { get; private set; }
+		public static Dictionary<string, IList<string>> ParsedSolution { get; private set; }
+
+		public static int ProjectsCompleted { get; set; }
+		public static int FilesCompleted { get; set; }
 
 		static void Main(string[] args)
 		{
@@ -36,64 +40,75 @@ namespace Maggot
 				return;
 			}
 
-			Log.Info("Beginning debridement of " + InputSolutionFile + "...");
+			Log.Info("Beginning analysis of " + InputSolutionFile + "...");
+			ParseSolution();
+			Log.Info("=============================");
+			Log.Info("Projects: " + ParsedSolution.Count);
+			Log.Info("Implementation Files: " + ParsedSolution.SelectMany(x => x.Value).Count());
+			Log.Info("=============================");
 
-			var projectsInSolution = SolutionFile.Parse(InputSolutionFile).ProjectsInOrder;
-			Log.Info(projectsInSolution.Count + " projects to process");
-
-			foreach (var projectInSolution in projectsInSolution)
+			Log.Info("Beginning debridement");
+			foreach (var project in ParsedSolution)
 			{
-				var projectFile = projectInSolution.AbsolutePath;
-				ProcessProject(projectFile);
+				Log.Info("-----------------------------");
+				ProcessProject(project.Key, project.Value);
+				Log.Info("-----------------------------");
 			}
-
 			Log.Info("Debridement complete!");
 
 			Console.WriteLine("Press any key to exit...");
 			Console.ReadKey();
 		}
 
-		private static void ProcessProject(string projectFile)
+		private static void ParseSolution()
 		{
-			Log.Info("Processing " + projectFile + "...");
+			ParsedSolution = new Dictionary<string, IList<string>>();
 
-			var projectDirectory = Path.GetDirectoryName(projectFile);
-			Debug.Assert(projectDirectory != null);
-
-			Log.Debug("Building list of files in project...");
-			var filesToProcess = new List<string>();
-
-			// Now get a list of the implementation files referenced from this project
-			var doc = XDocument.Load(projectFile);
-			var ns = doc.Root?.Name.Namespace;
-			var itemGroups = doc.Root?.Elements(ns + "ItemGroup").ToList();
-
-			if (itemGroups != null)
+			var projectsInSolution = SolutionFile.Parse(InputSolutionFile).ProjectsInOrder;
+			foreach (var projectInSolution in projectsInSolution)
 			{
-				var fileItems = itemGroups.Elements(ns + "ClCompile");
-				if (fileItems != null)
+				var projectFile = projectInSolution.AbsolutePath;
+
+				ParsedSolution.Add(projectFile, new List<string>());
+
+				// Now get a list of the implementation files referenced from this project
+				var doc = XDocument.Load(projectFile);
+				var ns = doc.Root?.Name.Namespace;
+				var itemGroups = doc.Root?.Elements(ns + "ItemGroup").ToList();
+
+				if (itemGroups != null)
 				{
-					foreach (var item in fileItems)
+					var fileItems = itemGroups.Elements(ns + "ClCompile");
+					if (fileItems != null)
 					{
-						var xAttribute = item.Attribute("Include");
-						if (xAttribute != null)
+						foreach (var item in fileItems)
 						{
-							filesToProcess.Add(xAttribute.Value);
+							var xAttribute = item.Attribute("Include");
+							if (xAttribute != null)
+							{
+								ParsedSolution[projectFile].Add(xAttribute.Value);
+							}
 						}
 					}
 				}
 			}
+		}
 
-			Log.Info(filesToProcess.Count + " implementation files to process");
+		private static void ProcessProject(string projectFile, IList<string> implementationFiles)
+		{
+			Log.Info("Processing " + projectFile + "...");
+			Log.Info("-----------------------------");
 
-			// Ok, we have built up a list of files in the solution
-			// Now we process each one
+			var projectDirectory = Path.GetDirectoryName(projectFile);
+
 			var deadFiles = new List<string>();
-			foreach (var implementationFile in filesToProcess)
+			
+			foreach (var implementationFile in implementationFiles)
 			{
 				Log.Info(implementationFile);
 
-				RefreshDirectory(projectDirectory);
+				DeleteContentsOfDirectory(projectDirectory);
+				RevertChangesInDirectory(projectDirectory);
 
 				RemoveReferenceToFile(projectFile, implementationFile);
 
@@ -111,13 +126,19 @@ namespace Maggot
 				Directory.CreateDirectory(targetDirectory);
 				File.WriteAllLines(Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(projectFile) + ".txt"), deadFiles);
 			}
+
+			Log.Info("-----------------------------");
+			ProjectsCompleted += 1;
+			FilesCompleted += implementationFiles.Count;
+				
+			Log.Info("Percent complete (by project):             " + (ProjectsCompleted / ParsedSolution.Count) * 100 + "%");
+			Log.Info("Percent complete (by implementation file): " + (FilesCompleted / ParsedSolution.SelectMany(x => x.Value).Count()) * 100 + "%");
 		}
 
-		private static void RefreshDirectory(string directory)
+		private static void DeleteContentsOfDirectory(string directory)
 		{
-			Log.Debug("Refreshing contents of " + directory + "...");
+			Log.Debug("Deleting contents of " + directory + "...");
 
-			Log.Debug("Deleting contents of folder");
 			var directoryInfo = new DirectoryInfo(directory);
 			foreach (var file in directoryInfo.GetFiles())
 			{
@@ -127,17 +148,19 @@ namespace Maggot
 			{
 				subDirectory.Delete(true);
 			}
+		}
+
+		private static void RevertChangesInDirectory(string directory)
+		{
+			Log.Debug("Reverting changes in " + directory + "...");
 
 			using (var client = new SvnClient())
 			{
-				Log.Debug("Reverting all changes to folder");
 				client.Revert(directory, new SvnRevertArgs
 				{
 					Depth = SvnDepth.Infinity,
 				});
 			}
-
-			Log.Debug("Finished refreshing directory " + directory);
 		}
 
 		private static void RemoveReferenceToFile(string projectFile, string fileName)
@@ -168,8 +191,6 @@ namespace Maggot
 					}
 				}
 			}
-
-			Log.Debug("Finished removing reference to file from project...");
 		}
 
 		private static bool BuildSolution(string solutionFile)
