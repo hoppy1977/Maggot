@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Logging;
 using SharpSvn;
 
 namespace Maggot
@@ -35,6 +36,15 @@ namespace Maggot
 			if (!File.Exists(InputSolutionFile))
 			{
 				Console.WriteLine("Specified solution file does not exist.");
+				Console.WriteLine("Press any key to exit...");
+				Console.ReadKey();
+				return;
+			}
+
+			Log.Info("Verifying " + InputSolutionFile + " will build");
+			if (!BuildSolution(InputSolutionFile))
+			{
+				Log.Error("Solution is not in a buildable state - unable to perform debridement!");
 				Console.WriteLine("Press any key to exit...");
 				Console.ReadKey();
 				return;
@@ -73,7 +83,7 @@ namespace Maggot
 				{
 					continue;
 				}
-				
+
 				ParsedSolution.Add(projectFile, new List<string>());
 
 				// Now get a list of the implementation files referenced from this project
@@ -107,7 +117,7 @@ namespace Maggot
 			var projectDirectory = Path.GetDirectoryName(projectFile);
 
 			var deadFiles = new List<string>();
-			
+
 			foreach (var implementationFile in implementationFiles)
 			{
 				Log.Info(implementationFile);
@@ -125,6 +135,10 @@ namespace Maggot
 				}
 			}
 
+			// We have now finished processing this project
+			// Revert any changes we have made so they don't interfere with the next project
+			RevertChangesInDirectory(projectDirectory);
+
 			if (deadFiles.Any())
 			{
 				var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFileSummaries");
@@ -135,9 +149,16 @@ namespace Maggot
 			Log.Info("-----------------------------");
 			ProjectsCompleted += 1;
 			FilesCompleted += implementationFiles.Count;
-				
-			Log.Info("Percent complete (by project):             " + ((ProjectsCompleted / (decimal)ParsedSolution.Count)) * 100 + "%");
-			Log.Info("Percent complete (by implementation file): " + (FilesCompleted / (decimal)ParsedSolution.SelectMany(x => x.Value).Count()) * 100 + "%");
+
+			Log.InfoFormat("Dead files identified:                     {0}", deadFiles.Count);
+
+			var totalProjects = ParsedSolution.Count;
+			var percentProjectsCompleted = (ProjectsCompleted / (double)totalProjects);
+			Log.InfoFormat("Percent complete (by project):             {0:P2}", percentProjectsCompleted);
+
+			var totalFiles = ParsedSolution.SelectMany(x => x.Value).Count();
+			var percentFilesCompleted = (FilesCompleted / (double)totalFiles);
+			Log.InfoFormat("Percent complete (by implementation file): {0:P2}", percentFilesCompleted);
 		}
 
 		private static void DeleteContentsOfDirectory(string directory)
@@ -204,14 +225,23 @@ namespace Maggot
 
 			try
 			{
-				var pc = new ProjectCollection();
-
 				var globalProperty = new Dictionary<string, string>();
 				globalProperty.Add("Configuration", "Debug");
 				globalProperty.Add("Platform", "x86");
+				//globalProperty.Add("Platform", "Mixed Platforms");
+
+				var pc = new ProjectCollection();
+				var buildParameters = new BuildParameters(pc);
+				buildParameters.Loggers = new[]
+				{
+					new FileLogger()
+					{
+						Parameters = @"logfile=c:\temp\ferret.txt"
+					},
+				};
 
 				var buildRequest = new BuildRequestData(solutionFile, globalProperty, null, new string[] { "Build" }, null);
-				var buildResult = BuildManager.DefaultBuildManager.Build(new BuildParameters(pc), buildRequest);
+				var buildResult = BuildManager.DefaultBuildManager.Build(buildParameters, buildRequest);
 				if (buildResult.OverallResult == BuildResultCode.Success)
 				{
 					Log.Debug("Build succeeded");
@@ -220,7 +250,7 @@ namespace Maggot
 			}
 			catch (Exception e)
 			{
-				Log.Debug("Exception thrown: " + e);
+				Log.Error("Exception thrown: " + e);
 			}
 
 			Log.Debug("Build failed");
