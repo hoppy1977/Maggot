@@ -64,11 +64,16 @@ namespace Maggot
 		{
 			ParsedSolution = new Dictionary<string, IList<string>>();
 
-			var projectsInSolution = SolutionFile.Parse(InputSolutionFile).ProjectsInOrder;
+			var projectsInSolution = SolutionFile.Parse(InputSolutionFile).ProjectsInOrder
+				.Where(x => x.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat);
 			foreach (var projectInSolution in projectsInSolution)
 			{
 				var projectFile = projectInSolution.AbsolutePath;
-
+				if (Path.GetExtension(projectFile) != ".vcxproj")
+				{
+					continue;
+				}
+				
 				ParsedSolution.Add(projectFile, new List<string>());
 
 				// Now get a list of the implementation files referenced from this project
