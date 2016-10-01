@@ -40,7 +40,7 @@ namespace Maggot
 				return;
 			}
 
-			Log.Info("Beginning analysis of " + InputSolutionFile + "...");
+			Log.Info("Beginning analysis of " + InputSolutionFile);
 			ParseSolution();
 			Log.Info("=============================");
 			Log.Info("Projects: " + ParsedSolution.Count);
@@ -52,8 +52,8 @@ namespace Maggot
 			{
 				Log.Info("-----------------------------");
 				ProcessProject(project.Key, project.Value);
-				Log.Info("-----------------------------");
 			}
+			Log.Info("-----------------------------");
 			Log.Info("Debridement complete!");
 
 			Console.WriteLine("Press any key to exit...");
@@ -101,7 +101,7 @@ namespace Maggot
 
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles)
 		{
-			Log.Info("Processing " + projectFile + "...");
+			Log.Info("Processing " + projectFile);
 			Log.Info("-----------------------------");
 
 			var projectDirectory = Path.GetDirectoryName(projectFile);
@@ -142,7 +142,7 @@ namespace Maggot
 
 		private static void DeleteContentsOfDirectory(string directory)
 		{
-			Log.Debug("Deleting contents of " + directory + "...");
+			Log.Debug("Deleting contents of " + directory);
 
 			var directoryInfo = new DirectoryInfo(directory);
 			foreach (var file in directoryInfo.GetFiles())
@@ -157,7 +157,7 @@ namespace Maggot
 
 		private static void RevertChangesInDirectory(string directory)
 		{
-			Log.Debug("Reverting changes in " + directory + "...");
+			Log.Debug("Reverting changes in " + directory);
 
 			using (var client = new SvnClient())
 			{
