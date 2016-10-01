@@ -136,8 +136,8 @@ namespace Maggot
 			ProjectsCompleted += 1;
 			FilesCompleted += implementationFiles.Count;
 				
-			Log.Info("Percent complete (by project):             " + (ProjectsCompleted / ParsedSolution.Count) * 100 + "%");
-			Log.Info("Percent complete (by implementation file): " + (FilesCompleted / ParsedSolution.SelectMany(x => x.Value).Count()) * 100 + "%");
+			Log.Info("Percent complete (by project):             " + ((ProjectsCompleted / (decimal)ParsedSolution.Count)) * 100 + "%");
+			Log.Info("Percent complete (by implementation file): " + (FilesCompleted / (decimal)ParsedSolution.SelectMany(x => x.Value).Count()) * 100 + "%");
 		}
 
 		private static void DeleteContentsOfDirectory(string directory)
