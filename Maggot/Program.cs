@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Xml.Linq;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
@@ -40,6 +41,10 @@ namespace Maggot
 				Console.ReadKey();
 				return;
 			}
+
+			Log.Info("Deleting old build log file");
+			var buildLogfile = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs" + "Build.log");
+			File.Delete(buildLogfile);
 
 			Log.Info("Verifying " + InputSolutionFile + " will build");
 			if (!BuildSolution(InputSolutionFile))
@@ -234,9 +239,11 @@ namespace Maggot
 				var buildParameters = new BuildParameters(pc);
 				buildParameters.Loggers = new[]
 				{
-					new FileLogger()
+					//new ConsoleLogger(),
+					new FileLogger
 					{
-						Parameters = @"logfile=c:\temp\ferret.txt"
+						Verbosity = LoggerVerbosity.Minimal,
+						Parameters = @"logfile=Logs\Build.log",
 					},
 				};
 
