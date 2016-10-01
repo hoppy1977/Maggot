@@ -43,7 +43,7 @@ namespace Maggot
 			}
 
 			Log.Info("Deleting old build log file");
-			var buildLogfile = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs" + "Build.log");
+			var buildLogfile = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs\Build.log");
 			File.Delete(buildLogfile);
 
 			Log.Info("Verifying " + InputSolutionFile + " will build");
@@ -231,8 +231,8 @@ namespace Maggot
 			try
 			{
 				var globalProperty = new Dictionary<string, string>();
-				globalProperty.Add("Configuration", "Debug");
-				globalProperty.Add("Platform", "x86");
+				//globalProperty.Add("Configuration", "Debug");
+				//globalProperty.Add("Platform", "x86");
 				//globalProperty.Add("Platform", "Mixed Platforms");
 
 				var pc = new ProjectCollection();
@@ -242,8 +242,8 @@ namespace Maggot
 					//new ConsoleLogger(),
 					new FileLogger
 					{
-						Verbosity = LoggerVerbosity.Minimal,
-						Parameters = @"logfile=Logs\Build.log",
+						Verbosity = LoggerVerbosity.Normal,
+						Parameters = @"LogFile=Logs\Build.log;Append=true",
 					},
 				};
 
