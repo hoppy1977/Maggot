@@ -124,9 +124,10 @@ namespace Maggot
 
 			var deadFiles = new List<string>();
 
+			var fileCounter = 1;
 			foreach (var implementationFile in implementationFiles)
 			{
-				Log.Info(implementationFile);
+				Log.InfoFormat(implementationFile + " ({0}/{1})", fileCounter, implementationFiles.Count);
 
 				DeleteContentsOfDirectory(projectDirectory);
 				RevertChangesInDirectory(projectDirectory);
@@ -139,6 +140,8 @@ namespace Maggot
 					Log.Info("Build suceeded: Dead code identified!");
 					deadFiles.Add(implementationFile);
 				}
+
+				fileCounter++;
 			}
 
 			// We have now finished processing this project
