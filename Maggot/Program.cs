@@ -56,10 +56,11 @@ namespace Maggot
 			Log.Info("=============================");
 
 			Log.Info("Beginning debridement");
+			var projectCounter = 1;
 			foreach (var project in ParsedSolution)
 			{
 				Log.Info("-----------------------------");
-				ProcessProject(project.Key, project.Value);
+				ProcessProject(project.Key, project.Value, projectCounter);
 			}
 			Log.Info("-----------------------------");
 			Log.Info("Debridement complete!");
@@ -110,9 +111,9 @@ namespace Maggot
 			TotalFiles = ParsedSolution.SelectMany(x => x.Value).Count();
 		}
 
-		private static void ProcessProject(string projectFile, IList<string> implementationFiles)
+		private static void ProcessProject(string projectFile, IList<string> implementationFiles, int projectCounter)
 		{
-			Log.Info("Processing " + projectFile);
+			Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, TotalProjects);
 			Log.Info("-----------------------------");
 
 			Log.Info("Verifying solution will build before processing project");
