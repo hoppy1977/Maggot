@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Xml.Linq;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
@@ -45,15 +44,6 @@ namespace Maggot
 			Log.Info("Deleting old build log file");
 			var buildLogfile = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs\Build.log");
 			File.Delete(buildLogfile);
-
-			Log.Info("Verifying " + InputSolutionFile + " will build");
-			if (!BuildSolution(InputSolutionFile))
-			{
-				Log.Error("Solution is not in a buildable state - unable to perform debridement!");
-				Console.WriteLine("Press any key to exit...");
-				Console.ReadKey();
-				return;
-			}
 
 			Log.Info("Beginning analysis of " + InputSolutionFile);
 			ParseSolution();
@@ -117,6 +107,17 @@ namespace Maggot
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles)
 		{
 			Log.Info("Processing " + projectFile);
+			Log.Info("-----------------------------");
+
+			Log.Info("Verifying solution will build before processing project");
+			if (!BuildSolution(InputSolutionFile))
+			{
+				Log.Error("Solution is not in a buildable state - unable to perform debridement!");
+				Console.WriteLine("Press any key to exit...");
+				Console.ReadKey();
+				return;
+			}
+			Log.Info("Solution built successfully");
 			Log.Info("-----------------------------");
 
 			var projectDirectory = Path.GetDirectoryName(projectFile);
