@@ -251,6 +251,7 @@ namespace Maggot
 					},
 				};
 
+				// ReSharper disable once RedundantExplicitArrayCreation
 				var buildRequest = new BuildRequestData(solutionFile, globalProperty, null, new string[] { "Build" }, null);
 				var buildResult = BuildManager.DefaultBuildManager.Build(buildParameters, buildRequest);
 				if (buildResult.OverallResult == BuildResultCode.Success)
