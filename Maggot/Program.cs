@@ -21,6 +21,9 @@ namespace Maggot
 		public static int ProjectsCompleted { get; set; }
 		public static int FilesCompleted { get; set; }
 
+		public static int TotalProjects { get; set; }
+		public static int TotalFiles { get; set; }
+
 		static void Main(string[] args)
 		{
 			if (args.Length != 1)
@@ -102,6 +105,9 @@ namespace Maggot
 					}
 				}
 			}
+
+			TotalProjects = ParsedSolution.Count;
+			TotalFiles = ParsedSolution.SelectMany(x => x.Value).Count();
 		}
 
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles)
@@ -161,12 +167,10 @@ namespace Maggot
 
 			Log.InfoFormat("Dead files identified:                     {0}", deadFiles.Count);
 
-			var totalProjects = ParsedSolution.Count;
-			var percentProjectsCompleted = (ProjectsCompleted / (double)totalProjects);
+			var percentProjectsCompleted = (ProjectsCompleted / (double)TotalProjects);
 			Log.InfoFormat("Percent complete (by project):             {0:P2}", percentProjectsCompleted);
 
-			var totalFiles = ParsedSolution.SelectMany(x => x.Value).Count();
-			var percentFilesCompleted = (FilesCompleted / (double)totalFiles);
+			var percentFilesCompleted = (FilesCompleted / (double)TotalFiles);
 			Log.InfoFormat("Percent complete (by implementation file): {0:P2}", percentFilesCompleted);
 		}
 
