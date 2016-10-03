@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -252,8 +253,17 @@ namespace Maggot
 				msBuildProcess.Start();
 				msBuildProcess.WaitForExit();
 
-				var buildOutput = msBuildProcess.StandardOutput.ReadToEnd();
+				// Write out the results of the build to a log file
+				var logFileDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs");
+				Directory.CreateDirectory(logFileDirectory);
+				var buildLogfileName = Path.Combine(logFileDirectory + @"\Build.log");
 
+				File.AppendAllText(buildLogfileName, "============================" + Environment.NewLine);
+				File.AppendAllText(buildLogfileName, DateTime.Now.ToString(CultureInfo.CurrentCulture) + Environment.NewLine);
+				File.AppendAllText(buildLogfileName, "============================" + Environment.NewLine);
+				var buildOutput = msBuildProcess.StandardOutput.ReadToEnd();
+				File.AppendAllText(buildLogfileName, buildOutput + Environment.NewLine);
+				
 				if (msBuildProcess.ExitCode == 0)
 				{
 					Log.Debug("Build succeeded");
