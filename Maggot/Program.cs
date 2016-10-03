@@ -144,7 +144,7 @@ namespace Maggot
 				var builtSuccessfully = BuildSolution(InputSolutionFile);
 				if (builtSuccessfully)
 				{
-					Log.Info("Build suceeded: Dead code identified!");
+					Log.Info("Build succeeded: Dead code identified!");
 					deadFiles.Add(implementationFile);
 				}
 
