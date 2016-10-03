@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml.Linq;
 using Microsoft.Build.Construction;
-using Microsoft.Build.Evaluation;
-using Microsoft.Build.Execution;
-using Microsoft.Build.Framework;
-using Microsoft.Build.Logging;
 using SharpSvn;
 
 namespace Maggot
@@ -239,27 +238,33 @@ namespace Maggot
 
 			try
 			{
-				var globalProperty = new Dictionary<string, string>();
-				//globalProperty.Add("Configuration", "Debug");
-				//globalProperty.Add("Platform", "x86");
-				//globalProperty.Add("Platform", "Mixed Platforms");
+				var arguments = new StringBuilder();
+//				arguments.Append("/p:Configuration=Release ");
+//				arguments.Append("/p:Platform=\"Mixed Platforms\" ");
+				arguments.Append("/p:SolutionDir=\"" + Path.GetDirectoryName(solutionFile) + "\\\\\" ");
+				arguments.Append("/m ");
+				
+				var msBuildProcess = new Process();
+				msBuildProcess.StartInfo.FileName = @"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe";
+				msBuildProcess.StartInfo.Arguments = arguments + " \"" + solutionFile + "\"";
+				msBuildProcess.StartInfo.RedirectStandardOutput = true;
+				msBuildProcess.StartInfo.UseShellExecute = false;
 
-				var pc = new ProjectCollection();
-				var buildParameters = new BuildParameters(pc);
-				buildParameters.Loggers = new[]
-				{
-					//new ConsoleLogger(),
-					new FileLogger
-					{
-						Verbosity = LoggerVerbosity.Normal,
-						Parameters = @"LogFile=Logs\Build.log;Append=true",
-					},
-				};
+				msBuildProcess.Start();
+				msBuildProcess.WaitForExit();
 
-				// ReSharper disable once RedundantExplicitArrayCreation
-				var buildRequest = new BuildRequestData(solutionFile, globalProperty, null, new string[] { "Build" }, null);
-				var buildResult = BuildManager.DefaultBuildManager.Build(buildParameters, buildRequest);
-				if (buildResult.OverallResult == BuildResultCode.Success)
+				// Write out the results of the build to a log file
+				var logFileDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs");
+				Directory.CreateDirectory(logFileDirectory);
+				var buildLogfileName = Path.Combine(logFileDirectory + @"\Build.log");
+
+				File.AppendAllText(buildLogfileName, "============================" + Environment.NewLine);
+				File.AppendAllText(buildLogfileName, DateTime.Now.ToString(CultureInfo.CurrentCulture) + Environment.NewLine);
+				File.AppendAllText(buildLogfileName, "============================" + Environment.NewLine);
+				var buildOutput = msBuildProcess.StandardOutput.ReadToEnd();
+				File.AppendAllText(buildLogfileName, buildOutput + Environment.NewLine);
+				
+				if (msBuildProcess.ExitCode == 0)
 				{
 					Log.Debug("Build succeeded");
 					return true;
