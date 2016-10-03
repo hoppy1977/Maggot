@@ -247,12 +247,13 @@ namespace Maggot
 				var msBuildProcess = new Process();
 				msBuildProcess.StartInfo.FileName = @"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe";
 				msBuildProcess.StartInfo.Arguments = arguments + " \"" + solutionFile + "\"";
-				msBuildProcess.StartInfo.RedirectStandardOutput = true;
-				msBuildProcess.StartInfo.UseShellExecute = false;
+				//msBuildProcess.StartInfo.RedirectStandardOutput = true;
+				//msBuildProcess.StartInfo.UseShellExecute = false;
 
 				msBuildProcess.Start();
 				msBuildProcess.WaitForExit();
 
+/*
 				// Write out the results of the build to a log file
 				var logFileDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs");
 				Directory.CreateDirectory(logFileDirectory);
@@ -263,7 +264,7 @@ namespace Maggot
 				File.AppendAllText(buildLogfileName, "============================" + Environment.NewLine);
 				var buildOutput = msBuildProcess.StandardOutput.ReadToEnd();
 				File.AppendAllText(buildLogfileName, buildOutput + Environment.NewLine);
-				
+*/				
 				if (msBuildProcess.ExitCode == 0)
 				{
 					Log.Debug("Build succeeded");
