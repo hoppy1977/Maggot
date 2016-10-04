@@ -16,11 +16,12 @@ namespace Maggot
 		public static string InputSolutionFile { get; private set; }
 		public static Dictionary<string, IList<string>> ParsedSolution { get; private set; }
 
-		public static int ProjectsCompleted { get; set; }
-		public static int FilesCompleted { get; set; }
+		public static int TotalProjectsCompleted { get; set; }
+		public static int TotalFilesCompleted { get; set; }
+		public static int TotalDeadFilesFound { get; set; }
 
-		public static int TotalProjects { get; set; }
-		public static int TotalFiles { get; set; }
+		public static int ProjectsToProcess { get; set; }
+		public static int FilesToProcess { get; set; }
 
 		static void Main(string[] args)
 		{
@@ -105,13 +106,13 @@ namespace Maggot
 				}
 			}
 
-			TotalProjects = ParsedSolution.Count;
-			TotalFiles = ParsedSolution.SelectMany(x => x.Value).Count();
+			ProjectsToProcess = ParsedSolution.Count;
+			FilesToProcess = ParsedSolution.SelectMany(x => x.Value).Count();
 		}
 
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles, int projectCounter)
 		{
-			Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, TotalProjects);
+			Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, ProjectsToProcess);
 			Log.Info("-----------------------------");
 
 			Log.Info("Verifying solution will build before processing project");
@@ -161,16 +162,18 @@ namespace Maggot
 			}
 
 			Log.Info("-----------------------------");
-			ProjectsCompleted += 1;
-			FilesCompleted += implementationFiles.Count;
+			TotalProjectsCompleted += 1;
+			TotalFilesCompleted += implementationFiles.Count;
+			TotalDeadFilesFound += deadFiles.Count;
 
-			Log.InfoFormat("Dead files identified:                     {0}", deadFiles.Count);
-
-			var percentProjectsCompleted = (ProjectsCompleted / (double)TotalProjects);
-			Log.InfoFormat("Percent complete (by project):             {0:P2}", percentProjectsCompleted);
-
-			var percentFilesCompleted = (FilesCompleted / (double)TotalFiles);
-			Log.InfoFormat("Percent complete (by implementation file): {0:P2}", percentFilesCompleted);
+			var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
+			Log.InfoFormat("{0} dead files identified in this project ({1:P2} of files)", deadFiles.Count, percentDeadFilesInProject);
+			var percentDeadFilesSoFar = (TotalDeadFilesFound / (double)FilesToProcess);
+			Log.InfoFormat("{0} dead files identified in total ({1:P2} of files)", TotalDeadFilesFound, percentDeadFilesSoFar);
+			var percentProjectsCompleted = (TotalProjectsCompleted / (double)ProjectsToProcess);
+			Log.InfoFormat("{0} projects (of {1}) processed so far ({2:P2})", TotalProjectsCompleted, ProjectsToProcess, percentProjectsCompleted);
+			var percentFilesCompleted = (TotalFilesCompleted / (double)FilesToProcess);
+			Log.InfoFormat("{0} files (of {1}) processed so far ({2:P2})", TotalFilesCompleted, FilesToProcess, percentFilesCompleted);
 		}
 
 		private static void DeleteContentsOfDirectory(string directory)
