@@ -116,7 +116,7 @@ namespace Maggot
 			Log.Info("-----------------------------");
 
 			Log.Info("Verifying solution will build before processing project");
-			if (!BuildSolution(InputSolutionFile))
+			if (!BuildSolution(InputSolutionFile, "Initial build"))
 			{
 				Log.Error("Solution is not in a buildable state - unable to perform debridement!");
 				Console.WriteLine("Press any key to exit...");
@@ -127,6 +127,7 @@ namespace Maggot
 			Log.Info("-----------------------------");
 
 			var projectDirectory = Path.GetDirectoryName(projectFile);
+			var projectName = Path.GetFileNameWithoutExtension(projectFile);
 
 			var deadFiles = new List<string>();
 
@@ -140,7 +141,7 @@ namespace Maggot
 
 				RemoveReferenceToFile(projectFile, implementationFile);
 
-				var builtSuccessfully = BuildSolution(InputSolutionFile);
+				var builtSuccessfully = BuildSolution(InputSolutionFile, projectName);
 				if (builtSuccessfully)
 				{
 					Log.Info("Build succeeded: Dead code identified!");
@@ -234,7 +235,7 @@ namespace Maggot
 			}
 		}
 
-		private static bool BuildSolution(string solutionFile)
+		private static bool BuildSolution(string solutionFile, string projectName)
 		{
 			Log.Debug("Beginning build");
 
@@ -242,7 +243,7 @@ namespace Maggot
 			{
 				var logFileDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs");
 				Directory.CreateDirectory(logFileDirectory);
-				var buildLogfileName = Path.Combine(logFileDirectory + @"\Build.log");
+				var buildLogfileName = Path.Combine(logFileDirectory + $"\\Build - {projectName}.log");
 
 				var arguments = new StringBuilder();
 //				arguments.Append("/p:Configuration=Release ");
@@ -252,7 +253,7 @@ namespace Maggot
 
 				arguments.Append("/filelogger ");
 				arguments.Append("/fileloggerparameters:"
-					+ "LogFile=" + buildLogfileName + ";"
+					+ "LogFile=\"" + buildLogfileName + "\";"
 					+ "Append");
 				
 				var msBuildProcess = new Process();
