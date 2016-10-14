@@ -246,9 +246,9 @@ namespace Maggot
 				var buildLogfileName = Path.Combine(logFileDirectory + $"\\Build - {projectName}.log");
 
 				var arguments = new StringBuilder();
-//				arguments.Append("/p:Configuration=Release ");
+				arguments.Append("/p:Configuration=Debug ");
 //				arguments.Append("/p:Platform=\"Mixed Platforms\" ");
-				arguments.Append("/p:SolutionDir=\"" + Path.GetDirectoryName(solutionFile) + "\\\\\" ");
+//				arguments.Append("/p:SolutionDir=\"" + Path.GetDirectoryName(solutionFile) + "\\\\\" ");
 				arguments.Append("/m ");
 
 				arguments.Append("/filelogger ");
