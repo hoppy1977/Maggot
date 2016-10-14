@@ -154,12 +154,15 @@ namespace Maggot
 			// We have now finished processing this project
 			// Revert any changes we have made so they don't interfere with the next project
 			RevertChangesInDirectory(projectDirectory);
-
+			
 			if (deadFiles.Any())
 			{
+				Log.Debug("-----------------------------");
+				Log.Debug($"Writing out {deadFiles.Count} files to DeadFileSummaries");
 				var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFileSummaries");
 				Directory.CreateDirectory(targetDirectory);
 				File.WriteAllLines(Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(projectFile) + ".txt"), deadFiles);
+				Log.Debug("Done.");
 			}
 
 			Log.Info("-----------------------------");
