@@ -168,9 +168,9 @@ namespace Maggot
 			TotalDeadFilesFound += deadFiles.Count;
 
 			var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
-			Log.InfoFormat("{0} dead files identified in this project ({1:P2} of files)", deadFiles.Count, percentDeadFilesInProject);
+			Log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
 			var percentDeadFilesSoFar = (TotalDeadFilesFound / (double)TotalFilesCompleted);
-			Log.InfoFormat("{0} dead files identified so far ({1:P2} of files)", TotalDeadFilesFound, percentDeadFilesSoFar);
+			Log.InfoFormat("{0} dead files identified so far ({1:P2} of files processed so far)", TotalDeadFilesFound, percentDeadFilesSoFar);
 			var percentProjectsCompleted = (TotalProjectsCompleted / (double)ProjectsToProcess);
 			Log.InfoFormat("{0} projects (of {1}) processed so far ({2:P2})", TotalProjectsCompleted, ProjectsToProcess, percentProjectsCompleted);
 			var percentFilesCompleted = (TotalFilesCompleted / (double)FilesToProcess);
