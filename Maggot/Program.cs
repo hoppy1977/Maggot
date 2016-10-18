@@ -257,6 +257,7 @@ namespace Maggot
 				arguments.Append("/filelogger ");
 				arguments.Append("/fileloggerparameters:"
 					+ "LogFile=\"" + buildLogfileName + "\";"
+					+ "Verbosity=normal;"
 					+ "Append");
 				
 				var msBuildProcess = new Process();
