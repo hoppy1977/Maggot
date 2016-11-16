@@ -112,11 +112,14 @@ namespace Maggot
 
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles, int projectCounter)
 		{
+			var projectDirectory = Path.GetDirectoryName(projectFile);
+			var projectName = Path.GetFileNameWithoutExtension(projectFile);
+
 			Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, ProjectsToProcess);
 			Log.Info("-----------------------------");
 
 			Log.Info("Verifying solution will build before processing project");
-			if (!BuildSolution(InputSolutionFile, "Initial build"))
+			if (!BuildSolution(InputSolutionFile, projectName))
 			{
 				Log.Error("Solution is not in a buildable state - unable to perform debridement!");
 				Console.WriteLine("Press any key to exit...");
@@ -125,9 +128,6 @@ namespace Maggot
 			}
 			Log.Info("Solution built successfully");
 			Log.Info("-----------------------------");
-
-			var projectDirectory = Path.GetDirectoryName(projectFile);
-			var projectName = Path.GetFileNameWithoutExtension(projectFile);
 
 			var deadFiles = new List<string>();
 
