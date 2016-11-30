@@ -12,7 +12,9 @@ namespace Maggot
 {
 	class Program
 	{
-		private static readonly log4net.ILog Log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+		private static readonly log4net.ILog Log =
+			log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
 		public static string InputSolutionFile { get; private set; }
 		public static Dictionary<string, IList<string>> ParsedSolution { get; private set; }
 
@@ -109,72 +111,82 @@ namespace Maggot
 
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles, int projectCounter)
 		{
-			var projectDirectory = Path.GetDirectoryName(projectFile);
-			var projectName = Path.GetFileNameWithoutExtension(projectFile);
-
-			Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, ProjectsToProcess);
-			Log.Info("-----------------------------");
-
-			Log.Info("Verifying solution will build before processing project");
-			if (!BuildSolution(InputSolutionFile, projectName))
+			try
 			{
-				Log.Error("Solution is not in a buildable state - unable to perform debridement!");
-				Console.WriteLine("Press any key to exit...");
-				Console.ReadKey();
-				return;
-			}
-			Log.Info("Solution built successfully");
-			Log.Info("-----------------------------");
+				var projectDirectory = Path.GetDirectoryName(projectFile);
+				var projectName = Path.GetFileNameWithoutExtension(projectFile);
 
-			var deadFiles = new List<string>();
+				Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, ProjectsToProcess);
+				Log.Info("-----------------------------");
 
-			var fileCounter = 1;
-			foreach (var implementationFile in implementationFiles)
-			{
-				Log.InfoFormat(implementationFile + " ({0}/{1})", fileCounter, implementationFiles.Count);
-
-				DeleteContentsOfDirectory(projectDirectory);
-				RevertChangesInDirectory(projectDirectory);
-
-				RemoveReferenceToFile(projectFile, implementationFile);
-
-				var builtSuccessfully = BuildSolution(InputSolutionFile, projectName);
-				if (builtSuccessfully)
+				Log.Info("Verifying solution will build before processing project");
+				if (!BuildSolution(InputSolutionFile, projectName))
 				{
-					Log.Info("*** Build succeeded: Dead code identified! ***");
-					deadFiles.Add(implementationFile);
+					Log.Error("Solution is not in a buildable state - unable to perform debridement!");
+					Console.WriteLine("Press any key to exit...");
+					Console.ReadKey();
+					return;
+				}
+				Log.Info("Solution built successfully");
+				Log.Info("-----------------------------");
+
+				var deadFiles = new List<string>();
+
+				var fileCounter = 1;
+				foreach (var implementationFile in implementationFiles)
+				{
+					Log.InfoFormat(implementationFile + " ({0}/{1})", fileCounter, implementationFiles.Count);
+
+					DeleteContentsOfDirectory(projectDirectory);
+					RevertChangesInDirectory(projectDirectory);
+
+					RemoveReferenceToFile(projectFile, implementationFile);
+
+					var builtSuccessfully = BuildSolution(InputSolutionFile, projectName);
+					if (builtSuccessfully)
+					{
+						Log.Info("*** Build succeeded: Dead code identified! ***");
+						deadFiles.Add(implementationFile);
+					}
+
+					fileCounter++;
 				}
 
-				fileCounter++;
-			}
+				// We have now finished processing this project
+				// Revert any changes we have made so they don't interfere with the next project
+				RevertChangesInDirectory(projectDirectory);
 
-			// We have now finished processing this project
-			// Revert any changes we have made so they don't interfere with the next project
-			RevertChangesInDirectory(projectDirectory);
-			
-			if (deadFiles.Any())
+				if (deadFiles.Any())
+				{
+					Log.Debug("-----------------------------");
+					Log.Debug($"Writing out {deadFiles.Count} files to DeadFileSummaries");
+					var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFileSummaries");
+					Directory.CreateDirectory(targetDirectory);
+					File.WriteAllLines(Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(projectFile) + ".txt"), deadFiles);
+					Log.Debug("Done.");
+				}
+
+				Log.Info("-----------------------------");
+				TotalProjectsCompleted += 1;
+				TotalFilesCompleted += implementationFiles.Count;
+				TotalDeadFilesFound += deadFiles.Count;
+
+				var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
+				Log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
+				var percentDeadFilesSoFar = (TotalDeadFilesFound / (double)TotalFilesCompleted);
+				Log.InfoFormat("{0} dead files identified so far ({1:P2} of files processed so far)", TotalDeadFilesFound, percentDeadFilesSoFar);
+				var percentProjectsCompleted = (TotalProjectsCompleted / (double)ProjectsToProcess);
+				Log.InfoFormat("{0} projects (of {1}) processed so far ({2:P2})", TotalProjectsCompleted, ProjectsToProcess, percentProjectsCompleted);
+				var percentFilesCompleted = (TotalFilesCompleted / (double)FilesToProcess);
+				Log.InfoFormat("{0} files (of {1}) processed so far ({2:P2})", TotalFilesCompleted, FilesToProcess, percentFilesCompleted);
+			}
+			catch (Exception ex)
 			{
-				Log.Debug("-----------------------------");
-				Log.Debug($"Writing out {deadFiles.Count} files to DeadFileSummaries");
-				var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFileSummaries");
-				Directory.CreateDirectory(targetDirectory);
-				File.WriteAllLines(Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(projectFile) + ".txt"), deadFiles);
-				Log.Debug("Done.");
+				Log.Error("*****************************");
+				Log.Error("An unexpected error occured when processing project " + projectFile);
+				Log.Error(ex.Message);
+				Log.Error("*****************************");
 			}
-
-			Log.Info("-----------------------------");
-			TotalProjectsCompleted += 1;
-			TotalFilesCompleted += implementationFiles.Count;
-			TotalDeadFilesFound += deadFiles.Count;
-
-			var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
-			Log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
-			var percentDeadFilesSoFar = (TotalDeadFilesFound / (double)TotalFilesCompleted);
-			Log.InfoFormat("{0} dead files identified so far ({1:P2} of files processed so far)", TotalDeadFilesFound, percentDeadFilesSoFar);
-			var percentProjectsCompleted = (TotalProjectsCompleted / (double)ProjectsToProcess);
-			Log.InfoFormat("{0} projects (of {1}) processed so far ({2:P2})", TotalProjectsCompleted, ProjectsToProcess, percentProjectsCompleted);
-			var percentFilesCompleted = (TotalFilesCompleted / (double)FilesToProcess);
-			Log.InfoFormat("{0} files (of {1}) processed so far ({2:P2})", TotalFilesCompleted, FilesToProcess, percentFilesCompleted);
 		}
 
 		private static void DeleteContentsOfDirectory(string directory)
