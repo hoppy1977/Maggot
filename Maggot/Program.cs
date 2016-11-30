@@ -56,6 +56,7 @@ namespace Maggot
 			{
 				Log.Info("-----------------------------");
 				ProcessProject(project.Key, project.Value, projectCounter);
+				projectCounter++;
 			}
 			Log.Info("-----------------------------");
 			Log.Info("Debridement complete!");
