@@ -111,9 +111,10 @@ namespace Maggot
 
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles, int projectCounter)
 		{
+			var projectDirectory = Path.GetDirectoryName(projectFile);
+
 			try
 			{
-				var projectDirectory = Path.GetDirectoryName(projectFile);
 				var projectName = Path.GetFileNameWithoutExtension(projectFile);
 
 				Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, ProjectsToProcess);
@@ -182,10 +183,15 @@ namespace Maggot
 			}
 			catch (Exception ex)
 			{
+				// There seems to be a problem within this project so we just skip it and continue processing the remaining projects
+
 				Log.Error("*****************************");
 				Log.Error("An unexpected error occured when processing project " + projectFile);
 				Log.Error(ex.Message);
 				Log.Error("*****************************");
+
+				// Revert any changes we have made so they don't interfere with the next project
+				RevertChangesInDirectory(projectDirectory);
 			}
 		}
 
