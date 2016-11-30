@@ -43,9 +43,16 @@ namespace Maggot
 				return;
 			}
 
-			Log.Info("Deleting old build log file");
-			var buildLogfile = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs\Build.log");
-			File.Delete(buildLogfile);
+			Log.Info("Deleting old build log files");
+			var logfileDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs");
+			var directoryInfo = new DirectoryInfo(logfileDirectory);
+			foreach (var file in directoryInfo.GetFiles())
+			{
+				if(file.Name.StartsWith("Build - "))
+				{
+					file.Delete();
+				}
+			}
 
 			Log.Info("Beginning analysis of " + InputSolutionFile);
 			ParseSolution();
