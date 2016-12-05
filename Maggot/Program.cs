@@ -12,9 +12,9 @@ namespace Maggot
 {
 	class Program
 	{
-		private static readonly log4net.ILog Log =
-			log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+		private static log4net.ILog _log;
 
+		public static string ResultsDirectory { get; private set; }
 		public static string InputSolutionFile { get; private set; }
 		public static Dictionary<string, IList<string>> ParsedSolution { get; private set; }
 
@@ -27,6 +27,12 @@ namespace Maggot
 
 		static void Main(string[] args)
 		{
+			ResultsDirectory = Path.Combine(Directory.GetCurrentDirectory(), DateTime.Now.ToString("yyyy_MM_dd - HH_mm_ss"));
+			Directory.CreateDirectory(ResultsDirectory);
+
+			log4net.GlobalContext.Properties["LogName"] = Path.Combine(ResultsDirectory, "Maggot.log");
+			_log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
 			if (args.Length != 1)
 			{
 				Console.WriteLine("Syntax is 'maggot <solution_to_process>'.");
@@ -45,23 +51,23 @@ namespace Maggot
 				return;
 			}
 
-			Log.Info("Beginning analysis of " + InputSolutionFile);
+			_log.Info("Beginning analysis of " + InputSolutionFile);
 			ParseSolution();
-			Log.Info("=============================");
-			Log.Info("Projects: " + ParsedSolution.Count);
-			Log.Info("Implementation Files: " + ParsedSolution.SelectMany(x => x.Value).Count());
-			Log.Info("=============================");
+			_log.Info("=============================");
+			_log.Info("Projects: " + ParsedSolution.Count);
+			_log.Info("Implementation Files: " + ParsedSolution.SelectMany(x => x.Value).Count());
+			_log.Info("=============================");
 
-			Log.Info("Beginning debridement");
+			_log.Info("Beginning debridement");
 			var projectCounter = 1;
 			foreach (var project in ParsedSolution)
 			{
-				Log.Info("-----------------------------");
+				_log.Info("-----------------------------");
 				ProcessProject(project.Key, project.Value, projectCounter);
 				projectCounter++;
 			}
-			Log.Info("-----------------------------");
-			Log.Info("Debridement complete!");
+			_log.Info("-----------------------------");
+			_log.Info("Debridement complete!");
 
 			Console.WriteLine("Press any key to exit...");
 			Console.ReadKey();
@@ -117,26 +123,26 @@ namespace Maggot
 			{
 				var projectName = Path.GetFileNameWithoutExtension(projectFile);
 
-				Log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, ProjectsToProcess);
-				Log.Info("-----------------------------");
+				_log.InfoFormat("Processing " + projectFile + " ({0}/{1})", projectCounter, ProjectsToProcess);
+				_log.Info("-----------------------------");
 
-				Log.Info("Verifying solution will build before processing project");
+				_log.Info("Verifying solution will build before processing project");
 				if (!BuildSolution(InputSolutionFile, projectName))
 				{
-					Log.Error("Solution is not in a buildable state - unable to perform debridement!");
+					_log.Error("Solution is not in a buildable state - unable to perform debridement!");
 					Console.WriteLine("Press any key to exit...");
 					Console.ReadKey();
 					return;
 				}
-				Log.Info("Solution built successfully");
-				Log.Info("-----------------------------");
+				_log.Info("Solution built successfully");
+				_log.Info("-----------------------------");
 
 				var deadFiles = new List<string>();
 
 				var fileCounter = 1;
 				foreach (var implementationFile in implementationFiles)
 				{
-					Log.InfoFormat(implementationFile + " ({0}/{1})", fileCounter, implementationFiles.Count);
+					_log.InfoFormat(implementationFile + " ({0}/{1})", fileCounter, implementationFiles.Count);
 
 					DeleteContentsOfDirectory(projectDirectory);
 					RevertChangesInDirectory(projectDirectory);
@@ -146,7 +152,7 @@ namespace Maggot
 					var builtSuccessfully = BuildSolution(InputSolutionFile, projectName);
 					if (builtSuccessfully)
 					{
-						Log.Info("*** Build succeeded: Dead code identified! ***");
+						_log.Info("*** Build succeeded: Dead code identified! ***");
 						deadFiles.Add(implementationFile);
 					}
 
@@ -159,36 +165,37 @@ namespace Maggot
 
 				if (deadFiles.Any())
 				{
-					Log.Debug("-----------------------------");
-					Log.Debug($"Writing out {deadFiles.Count} files to DeadFileSummaries");
-					var targetDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\DeadFileSummaries");
+					_log.Debug("-----------------------------");
+					_log.Debug($"Writing out {deadFiles.Count} files to DeadFileSummaries");
+
+					var targetDirectory = Path.Combine(ResultsDirectory, "DeadFileSummaries");
 					Directory.CreateDirectory(targetDirectory);
 					File.WriteAllLines(Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(projectFile) + ".txt"), deadFiles);
-					Log.Debug("Done.");
+					_log.Debug("Done.");
 				}
 
-				Log.Info("-----------------------------");
+				_log.Info("-----------------------------");
 				TotalProjectsCompleted += 1;
 				TotalFilesCompleted += implementationFiles.Count;
 				TotalDeadFilesFound += deadFiles.Count;
 
 				var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
-				Log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
+				_log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
 				var percentDeadFilesSoFar = (TotalDeadFilesFound / (double)TotalFilesCompleted);
-				Log.InfoFormat("{0} dead files identified so far ({1:P2} of files processed so far)", TotalDeadFilesFound, percentDeadFilesSoFar);
+				_log.InfoFormat("{0} dead files identified so far ({1:P2} of files processed so far)", TotalDeadFilesFound, percentDeadFilesSoFar);
 				var percentProjectsCompleted = (TotalProjectsCompleted / (double)ProjectsToProcess);
-				Log.InfoFormat("{0} projects (of {1}) processed so far ({2:P2})", TotalProjectsCompleted, ProjectsToProcess, percentProjectsCompleted);
+				_log.InfoFormat("{0} projects (of {1}) processed so far ({2:P2})", TotalProjectsCompleted, ProjectsToProcess, percentProjectsCompleted);
 				var percentFilesCompleted = (TotalFilesCompleted / (double)FilesToProcess);
-				Log.InfoFormat("{0} files (of {1}) processed so far ({2:P2})", TotalFilesCompleted, FilesToProcess, percentFilesCompleted);
+				_log.InfoFormat("{0} files (of {1}) processed so far ({2:P2})", TotalFilesCompleted, FilesToProcess, percentFilesCompleted);
 			}
 			catch (Exception ex)
 			{
 				// There seems to be a problem within this project so we just skip it and continue processing the remaining projects
 
-				Log.Error("*****************************");
-				Log.Error("An unexpected error occured when processing project " + projectFile);
-				Log.Error(ex.Message);
-				Log.Error("*****************************");
+				_log.Error("*****************************");
+				_log.Error("An unexpected error occured when processing project " + projectFile);
+				_log.Error(ex.Message);
+				_log.Error("*****************************");
 
 				// Revert any changes we have made so they don't interfere with the next project
 				RevertChangesInDirectory(projectDirectory);
@@ -197,7 +204,7 @@ namespace Maggot
 
 		private static void DeleteContentsOfDirectory(string directory)
 		{
-			Log.Debug("Deleting contents of " + directory);
+			_log.Debug("Deleting contents of " + directory);
 
 			var directoryInfo = new DirectoryInfo(directory);
 			foreach (var file in directoryInfo.GetFiles())
@@ -212,7 +219,7 @@ namespace Maggot
 
 		private static void RevertChangesInDirectory(string directory)
 		{
-			Log.Debug("Reverting changes in " + directory);
+			_log.Debug("Reverting changes in " + directory);
 
 			using (var client = new SvnClient())
 			{
@@ -225,7 +232,7 @@ namespace Maggot
 
 		private static void RemoveReferenceToFile(string projectFile, string fileName)
 		{
-			Log.Debug("Removing reference to file from project...");
+			_log.Debug("Removing reference to file from project...");
 
 			var doc = XDocument.Load(projectFile);
 			var ns = doc.Root?.Name.Namespace;
@@ -255,13 +262,13 @@ namespace Maggot
 
 		private static bool BuildSolution(string solutionFile, string projectName)
 		{
-			Log.Debug("Beginning build");
+			_log.Debug("Beginning build");
 
 			try
 			{
-				var logFileDirectory = Path.Combine(Directory.GetCurrentDirectory() + @"\Logs");
-				Directory.CreateDirectory(logFileDirectory);
-				var buildLogfileName = Path.Combine(logFileDirectory + $"\\Build - {projectName}.log");
+				var buildLogsDirectory = Path.Combine(ResultsDirectory, "Build");
+				Directory.CreateDirectory(buildLogsDirectory);
+				var buildLogfileName = Path.Combine(buildLogsDirectory, $@"{projectName}.log");
 
 				var arguments = new StringBuilder();
 				arguments.Append("/p:Configuration=Debug ");
@@ -284,16 +291,16 @@ namespace Maggot
 
 				if (msBuildProcess.ExitCode == 0)
 				{
-					Log.Debug("Build succeeded");
+					_log.Debug("Build succeeded");
 					return true;
 				}
 			}
 			catch (Exception e)
 			{
-				Log.Error("Exception thrown: " + e);
+				_log.Error("Exception thrown: " + e);
 			}
 
-			Log.Debug("Build failed");
+			_log.Debug("Build failed");
 
 			return false;
 		}
