@@ -14,6 +14,7 @@ namespace Maggot
 	{
 		private static log4net.ILog _log;
 
+		public static DateTime StartTime { get; private set; }
 		public static string ResultsDirectory { get; private set; }
 		public static string InputSolutionFile { get; private set; }
 		public static Dictionary<string, IList<string>> ParsedSolution { get; private set; }
@@ -32,6 +33,8 @@ namespace Maggot
 
 			log4net.GlobalContext.Properties["LogName"] = Path.Combine(ResultsDirectory, "Maggot.log");
 			_log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+			StartTime = DateTime.Now;
 
 			if (args.Length != 1)
 			{
@@ -178,6 +181,9 @@ namespace Maggot
 				TotalProjectsCompleted += 1;
 				TotalFilesCompleted += implementationFiles.Count;
 				TotalDeadFilesFound += deadFiles.Count;
+
+				var totalTimeElapsed = DateTime.Now - StartTime;
+				_log.InfoFormat("Time elapsed: {0}", totalTimeElapsed.ToReadableString());
 
 				var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
 				_log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
