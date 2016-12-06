@@ -183,7 +183,7 @@ namespace Maggot
 				TotalDeadFilesFound += deadFiles.Count;
 
 				var totalTimeElapsed = DateTime.Now - StartTime;
-				_log.InfoFormat("Time elapsed: {0}", totalTimeElapsed.ToReadableString());
+				_log.InfoFormat("Total time elapsed: {0}", totalTimeElapsed.ToReadableString());
 
 				var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
 				_log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
