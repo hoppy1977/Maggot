@@ -121,6 +121,7 @@ namespace Maggot
 		private static void ProcessProject(string projectFile, IList<string> implementationFiles, int projectCounter)
 		{
 			var projectDirectory = Path.GetDirectoryName(projectFile);
+			Debug.Assert(projectDirectory != null, "projectDirectory != null");
 
 			try
 			{
@@ -147,16 +148,20 @@ namespace Maggot
 				{
 					_log.InfoFormat(implementationFile + " ({0}/{1})", fileCounter, implementationFiles.Count);
 
-					DeleteContentsOfDirectory(projectDirectory);
-					RevertChangesInDirectory(projectDirectory);
-
-					RemoveReferenceToFile(projectFile, implementationFile);
-
-					var builtSuccessfully = BuildSolution(InputSolutionFile, projectName);
-					if (builtSuccessfully)
+					var fullPath = Path.Combine(projectDirectory, implementationFile);
+					if (!IsExcluded(fullPath))
 					{
-						_log.Info("*** Build succeeded: Dead code identified! ***");
-						deadFiles.Add(implementationFile);
+						DeleteContentsOfDirectory(projectDirectory);
+						RevertChangesInDirectory(projectDirectory);
+
+						RemoveReferenceToFile(projectFile, implementationFile);
+
+						var builtSuccessfully = BuildSolution(InputSolutionFile, projectName);
+						if (builtSuccessfully)
+						{
+							_log.Info("*** Build succeeded: Dead code identified! ***");
+							deadFiles.Add(implementationFile);
+						}
 					}
 
 					fileCounter++;
@@ -206,6 +211,18 @@ namespace Maggot
 				// Revert any changes we have made so they don't interfere with the next project
 				RevertChangesInDirectory(projectDirectory);
 			}
+		}
+
+		private static bool IsExcluded(string fullPath)
+		{
+			var fileName = Path.GetFileName(fullPath);
+			if (string.Compare(fileName, "AssemblyInfo.cpp", StringComparison.InvariantCultureIgnoreCase) == 0)
+			{
+				_log.Debug("Skipping processing of AssemblyInfo file");
+				return true;
+			}
+
+			return false;
 		}
 
 		private static void DeleteContentsOfDirectory(string directory)
