@@ -222,6 +222,14 @@ namespace Maggot
 				return true;
 			}
 
+			var fileText = File.ReadAllText(fullPath);
+			if (fileText.Contains("App, CWinApp)")  // BEGIN_MESSAGE_MAP(CMFCApplicationApp, CWinApp)
+				|| fileText.Contains(" theApp;"))   // CMFCApplicationApp theApp;
+			{
+				_log.Debug("Skipping processing of MFC application class");
+				return true;
+			}
+
 			return false;
 		}
 
