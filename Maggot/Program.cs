@@ -190,13 +190,13 @@ namespace Maggot
 				var totalTimeElapsed = DateTime.Now - StartTime;
 				_log.InfoFormat("Total time elapsed: {0}", totalTimeElapsed.ToReadableString());
 
-				var percentDeadFilesInProject = (deadFiles.Count / (double)implementationFiles.Count);
+				var percentDeadFilesInProject = (deadFiles.Count/(double) implementationFiles.Count);
 				_log.InfoFormat("{0} dead files identified in this project ({1:P2} of files in project)", deadFiles.Count, percentDeadFilesInProject);
-				var percentDeadFilesSoFar = (TotalDeadFilesFound / (double)TotalFilesCompleted);
+				var percentDeadFilesSoFar = (TotalDeadFilesFound/(double) TotalFilesCompleted);
 				_log.InfoFormat("{0} dead files identified so far ({1:P2} of files processed so far)", TotalDeadFilesFound, percentDeadFilesSoFar);
-				var percentProjectsCompleted = (TotalProjectsCompleted / (double)ProjectsToProcess);
+				var percentProjectsCompleted = (TotalProjectsCompleted/(double) ProjectsToProcess);
 				_log.InfoFormat("{0} projects (of {1}) processed so far ({2:P2})", TotalProjectsCompleted, ProjectsToProcess, percentProjectsCompleted);
-				var percentFilesCompleted = (TotalFilesCompleted / (double)FilesToProcess);
+				var percentFilesCompleted = (TotalFilesCompleted/(double) FilesToProcess);
 				_log.InfoFormat("{0} files (of {1}) processed so far ({2:P2})", TotalFilesCompleted, FilesToProcess, percentFilesCompleted);
 			}
 			catch (Exception ex)
@@ -208,13 +208,15 @@ namespace Maggot
 				_log.Error(ex.Message);
 				_log.Error("*****************************");
 
-				// Revert any changes we have made so they don't interfere with the next project
-				RevertChangesInDirectory(projectDirectory);
+				Console.WriteLine("Press any key to continue processing the next project...");
+				Console.ReadKey();
 			}
 		}
 
 		private static bool IsExcluded(string fullPath)
 		{
+			_log.Debug("Checking if file is excluded from debridement process...");
+
 			var fileName = Path.GetFileName(fullPath);
 			if (string.Compare(fileName, "AssemblyInfo.cpp", StringComparison.InvariantCultureIgnoreCase) == 0)
 			{
@@ -230,6 +232,7 @@ namespace Maggot
 				return true;
 			}
 
+			_log.Debug("File is not excluded");
 			return false;
 		}
 
@@ -246,19 +249,37 @@ namespace Maggot
 			{
 				subDirectory.Delete(true);
 			}
+
+			_log.Debug("Done");
 		}
 
 		private static void RevertChangesInDirectory(string directory)
 		{
 			_log.Debug("Reverting changes in " + directory);
 
-			using (var client = new SvnClient())
+			var revertAttempts = 0;
+
+			while (revertAttempts < 5)
 			{
-				client.Revert(directory, new SvnRevertArgs
+				_log.Debug($"Attempting revert (attempt {++revertAttempts})");
+
+				using (var client = new SvnClient())
 				{
-					Depth = SvnDepth.Infinity,
-				});
+					var result = client.Revert(directory, new SvnRevertArgs
+					{
+						Depth = SvnDepth.Infinity,
+					});
+
+					if (result)
+					{
+						_log.Debug("Revert succeeded");
+						return;
+					}
+					_log.Warn("Revert attempt failed");
+				}
 			}
+
+			throw new InvalidOperationException("Unable to revert: " + directory);
 		}
 
 		private static void RemoveReferenceToFile(string projectFile, string fileName)
@@ -289,6 +310,8 @@ namespace Maggot
 					}
 				}
 			}
+
+			_log.Debug("Done");
 		}
 
 		private static bool BuildSolution(string solutionFile, string projectName)
