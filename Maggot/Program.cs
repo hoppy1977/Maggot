@@ -224,6 +224,12 @@ namespace Maggot
 				return true;
 			}
 
+			if (string.Compare(fileName, "StdAfx.cpp", StringComparison.InvariantCultureIgnoreCase) == 0)
+			{
+				_log.Debug("Skipping processing of StdAfx file");
+				return true;
+			}
+
 			var fileText = File.ReadAllText(fullPath);
 			if (fileText.Contains("App, CWinApp)")  // BEGIN_MESSAGE_MAP(CMFCApplicationApp, CWinApp)
 				|| fileText.Contains(" theApp;"))   // CMFCApplicationApp theApp;
