@@ -1,0 +1,28 @@
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+x64/
+x86/
+bld/
+[Oo]bj/
+[Ll]og/
+
+# Executables
+*.exe
+*.exe.config
+*.pdb
+
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
